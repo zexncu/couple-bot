@@ -9,6 +9,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import os
+from aiohttp import web
 
 # --- НАСТРОЙКА ---
 BOT_TOKEN = "8880847718:AAF8ioJVP45Dqz83ZoI7O-qaEtwaHc9aDgo"  # ⚠️ Укажите ваш токен от @BotFather в кавычках
@@ -470,10 +472,29 @@ async def forward_to_partner(message: types.Message):
     else:
         await message.answer("Вы ещё не связаны с партнёром. Используйте /start.")
 
+async def handle(request):
+    return web.Response(text="Бот работает!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    # Render сам передает нужный порт в переменную окружения PORT, если её нет — ставим 10000
+    port = int(os.environ.get("PORT", 10000))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f"Веб-сервер успешно запущен на порту {port}")
+
 async def main():
+    # Запускаем наш веб-сервер-"обманку"
+    await start_web_server()
+    
+    # Запускаем планировщик задач
     scheduler.add_job(send_daily_question_job, "cron", hour=21, minute=0)
     scheduler.add_job(check_time_capsules_job, "interval", minutes=1)
     scheduler.start()
+    
     print("Бот успешно запущен со всеми функциями!")
     await dp.start_polling(bot)
 
